@@ -1,0 +1,48 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Pulumi local state & plugins
+.pulumi/
+.pulumi_plugins/
+Pulumi.*.yaml
+*.backup
+*.tgz
+
+# Stack config files (if you want to keep them out of Git)
+# Uncomment if you do NOT want to check your Pulumi.<stack>.yaml into source control
+# Pulumi.*.yaml
+# Pulumi.*.json
+
+# Environment files
+.env
+.env.*.local
+
+# Logs
+*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.iml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# AWS SAM
+.aws-sam/

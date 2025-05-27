@@ -1,0 +1,7 @@
+name: vpc-peering
+runtime: nodejs
+description: A Pulumi program to create a VPC peering connection between two VPCs in AWS.
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript
