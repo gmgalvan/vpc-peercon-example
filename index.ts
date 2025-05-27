@@ -26,7 +26,7 @@ const accRef = new pulumi.StackReference(accCfg.require("stackRef"));
 const reqVpcId = reqRef.getOutput("vpcId");
 const accVpcId = accRef.getOutput("vpcId");
 
-// Look up the CIDRs (unchanged)
+// Look up the CIDRs
 const reqVpc = aws.ec2.getVpcOutput({ id: reqVpcId }, { provider: requester });
 const accVpc = aws.ec2.getVpcOutput({ id: accVpcId }, { provider: accepter });
 
@@ -44,33 +44,31 @@ new aws.ec2.VpcPeeringConnectionAccepter("peer-acc-accept", {
   autoAccept            : true,
 }, { provider: accepter });
 
-// 3) Fetch each main route table via filter
-const reqRts = aws.ec2.getRouteTablesOutput({
-  vpcId:    reqVpcId,
-  filters: [{ name: "association.main", values: ["true"] }],
-}, { provider: requester });
+// 3) Get configured route table IDs from config
+const reqRouteTableIds = reqCfg.requireObject<string[]>("routeTableIds");
+const accRouteTableIds = accCfg.requireObject<string[]>("routeTableIds");
 
-const accRts = aws.ec2.getRouteTablesOutput({
-  vpcId:    accVpcId,
-  filters: [{ name: "association.main", values: ["true"] }],
-}, { provider: accepter });
+// 4) Create routes in specified requester route tables pointing to accepter VPC
+reqRouteTableIds.forEach((rtId, index) => {
+  new aws.ec2.Route(`route-req-to-acc-${index}`, {
+    routeTableId          : rtId,
+    destinationCidrBlock  : accVpc.cidrBlock,
+    vpcPeeringConnectionId: peer.id,
+  }, { provider: requester });
+});
 
-// Extract the single route table IDs
-const reqRtId = reqRts.ids.apply(ids => ids[0]);
-const accRtId = accRts.ids.apply(ids => ids[0]);
+// 5) Create routes in specified accepter route tables pointing to requester VPC
+accRouteTableIds.forEach((rtId, index) => {
+  new aws.ec2.Route(`route-acc-to-req-${index}`, {
+    routeTableId          : rtId,
+    destinationCidrBlock  : reqVpc.cidrBlock,
+    vpcPeeringConnectionId: peer.id,
+  }, { provider: accepter });
+});
 
-// 4) Create routes pointing across the peering in each account
-new aws.ec2.Route("route-req-to-acc", {
-  routeTableId          : reqRtId,
-  destinationCidrBlock  : accVpc.cidrBlock,
-  vpcPeeringConnectionId: peer.id,
-}, { provider: requester });
-
-new aws.ec2.Route("route-acc-to-req", {
-  routeTableId          : accRtId,
-  destinationCidrBlock  : reqVpc.cidrBlock,
-  vpcPeeringConnectionId: peer.id,
-}, { provider: accepter });
-
-// Export the peering ID
+// Export the peering ID and route table info
 export const vpcPeeringId = peer.id;
+export const requesterRouteTableCount = reqRouteTableIds.length;
+export const accepterRouteTableCount = accRouteTableIds.length;
+export const configuredRequesterRouteTables = reqRouteTableIds;
+export const configuredAccepterRouteTables = accRouteTableIds;
